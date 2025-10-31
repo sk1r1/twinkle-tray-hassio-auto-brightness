@@ -43,15 +43,29 @@ def get_lux_from_home_assistant():
         return None
 
 def map_lux_to_brightness(lux_value):
-    """Maps a lux value to a brightness percentage based on the defined mapping."""
-    # Sort mapping by lux threshold to ensure correct order
-    mapping_sorted = sorted(LUX_BRIGHTNESS_MAPPING, key=lambda x: x[0])
+    # Sort by lux value
+    LUX_BRIGHTNESS_MAPPING.sort(key=lambda x: x[0])
     
-    for lux_threshold, brightness in mapping_sorted:
-        if lux_value <= lux_threshold:
-            return brightness
-    # Return the highest brightness if lux is above all thresholds
-    return mapping_sorted[-1][1]
+    # Handle values below minimum
+    if lux_value <= LUX_BRIGHTNESS_MAPPING[0][0]:
+        return float(LUX_BRIGHTNESS_MAPPING[0][1])
+    
+    # Handle values above maximum
+    if lux_value >= LUX_BRIGHTNESS_MAPPING[-1][0]:
+        return float(LUX_BRIGHTNESS_MAPPING[-1][1])
+    
+    # Find the two points to interpolate between
+    for i in range(len(LUX_BRIGHTNESS_MAPPING) - 1):
+        lux_low, brightness_low = LUX_BRIGHTNESS_MAPPING[i]
+        lux_high, brightness_high = LUX_BRIGHTNESS_MAPPING[i + 1]
+        
+        if lux_low <= lux_value <= lux_high:
+            # Linear interpolation formula
+            ratio = (lux_value - lux_low) / (lux_high - lux_low)
+            interpolated_brightness = brightness_low + ratio * (brightness_high - brightness_low)
+            return round(interpolated_brightness, 1)  # Round to 1 decimal place
+    
+    return float(LUX_BRIGHTNESS_MAPPING[-1][1])  # Fallback
 
 def set_monitor_brightness(brightness_percentage):
     """Sets the monitor brightness using Twinkle Tray's command line."""
